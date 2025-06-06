@@ -1,69 +1,58 @@
 # pylint: disable=missing-module-docstring
-import io
 
+import ast
 import duckdb
-import pandas as pd
+
 import streamlit as st
 
-CSV = """
-beverage,price
-orange juice,2.5
-Expresso,2
-Tea,3
-"""
-beverages = pd.read_csv(io.StringIO(CSV))
+con = duckdb.connect(database="data/exercises_sql_tables.duckdb", read_only=False)
 
-CSV2 = """
-food_item,food_price
-cookie juice,2.5
-chocolatine,2
-muffin,3
-"""
-food_items = pd.read_csv(io.StringIO(CSV2))
+with st.sidebar:
+    theme = st.selectbox(
+        "What would you like to review?",
+        ("cross_joins", "GroupBy", "Window Functions"),
+        index=None,
+        placeholder="Select a theme...",
+    )
+    st.write("You selected:", theme)
 
-ANSWER_STR = """
-SELECT * FROM beverages CROSS JOIN food_items
-"""
-solution_df = duckdb.sql(ANSWER_STR).df()
+    exercise_selected = con.execute(
+        f"SELECT * FROM memory_state WHERE theme = '{theme}'"
+    ).df()
+    st.write(exercise_selected)
+
+    try:
+        exercise_name = exercise_selected.loc[0, "exercise_name"]
+        with open(f"answers/{exercise_name}.sql") as f:
+            answer = f.read()
+        exercise_answer = con.execute(answer).df()
+    except KeyError as e:
+        st.write("no data for this exercise")
+
 
 st.header("enter your code :")
 query = st.text_area("votre Code SQL ici", key="user_input")
 if query:
-    result = duckdb.sql(query).df()
+    result = con.execute(query).df()
     st.dataframe(result)
-
-    try:
-        result = result[solution_df.columns]
-        st.dataframe(result.compare(solution_df))
-    except KeyError as e:
-        st.write("Some columns are missing")
-
-    n_lines_difference = result.shape[0] - solution_df.shape[0]
-    if n_lines_difference != 0:
-        st.write(
-            f"The results has a {n_lines_difference} lines difference with the solution"
-        )
-
-
-with st.sidebar:
-    option = st.selectbox(
-        "What would you like to review?",
-        ("Joins", "GroupBy", "Window Functions"),
-        index=None,
-        placeholder="Select a theme...",
-    )
-    st.write("You selected:", option)
 
 tab2, tab3 = st.tabs(["Tables", "Solutions"])
 
-
 with tab2:
-    st.write("table : bereages")
-    st.dataframe(beverages)
-    st.write("table : food_items")
-    st.dataframe(food_items)
-    st.write("expected :")
-    st.dataframe(solution_df)
+    try:
+        exercise_tables = ast.literal_eval(exercise_selected.loc[0, "tables"])
+        for table in exercise_tables:
+            st.write(f"table: {table}")
+            df_table = con.execute(f"SELECT * FROM {table}").df()
+            st.dataframe(df_table)
+    except KeyError as e:
+        st.write("no data for this exercise")
 
 with tab3:
-    st.write(ANSWER_STR)
+    try:
+        with open(f"answers/{exercise_name}.sql", "r") as f:
+            answer = f.read()
+        st.write(answer)
+        st.write(exercise_answer)
+    except NameError as e:
+        st.write("no data for this exercise")

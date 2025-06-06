@@ -16,10 +16,12 @@ with st.sidebar:
     )
     st.write("You selected:", theme)
 
-    exercise_selected = con.execute(f"SELECT * FROM memory_state WHERE theme = '{theme}'").df()
+    exercise_selected = con.execute(
+        f"SELECT * FROM memory_state WHERE theme = '{theme}'"
+    ).df()
     st.write(exercise_selected)
 
-    try :
+    try:
         exercise_name = exercise_selected.loc[0, "exercise_name"]
         with open(f"answers/{exercise_name}.sql") as f:
             answer = f.read()
@@ -37,8 +39,8 @@ if query:
 tab2, tab3 = st.tabs(["Tables", "Solutions"])
 
 with tab2:
-    try :
-        exercise_tables = ast.literal_eval(exercise_selected.loc[0,"tables"])
+    try:
+        exercise_tables = ast.literal_eval(exercise_selected.loc[0, "tables"])
         for table in exercise_tables:
             st.write(f"table: {table}")
             df_table = con.execute(f"SELECT * FROM {table}").df()

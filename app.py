@@ -9,6 +9,7 @@ from pathlib import Path
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
 
+
 # Définir les chemins
 data_folder = Path("data")
 db_file = data_folder / "exercises_sql_tables.duckdb"
@@ -29,6 +30,27 @@ if not db_file.exists():
 
 con = duckdb.connect(database="data/exercises_sql_tables.duckdb", read_only=False)
 
+def check_users_solution(user_query:str) -> None:
+    """
+    Checks that user SQL query is correct by:
+    1: checking the columns
+    2: checkig the volutmes 
+    :param user_query: a string containing the SQL query inserted by the user
+    """
+    result = con.execute(query).df()
+    st.dataframe(result)
+
+    try:
+        result = result[solutions_df.columns]
+        st.dataframe(result)
+    except KeyError as e:
+        st.write("Some columns are missing")
+
+    n_lines_differences = result.shape[0] - solutions_df.shape[0]
+    if n_lines_differences != 0:
+        st.write(
+            f"result has a {n_lines_differences} lines difference with the solution"
+        )
 
 with st.sidebar:
     available_themes_df = con.execute("SELECT DISTINCT theme FROM memory_state").df()
@@ -39,10 +61,10 @@ with st.sidebar:
         placeholder="Select a theme...",
     )
 
-    if theme :
+    if theme:
         st.write(f"You selected:", theme)
         select_exercise_query = f"SELECT * FROM memory_state WHERE theme = '{theme}'"
-    else :
+    else:
         select_exercise_query = f"SELECT * FROM memory_state WHERE theme = '{theme}'"
     exercise_selected = (
         con.execute(select_exercise_query)
@@ -56,16 +78,16 @@ with st.sidebar:
         exercise_name = exercise_selected.loc[0, "exercise_name"]
         with open(f"answers/{exercise_name}.sql") as f:
             answer = f.read()
-        exercise_answer = con.execute(answer).df()
+        solutions_df = con.execute(answer).df()
     except KeyError as e:
         st.write("no data for this exercise")
 
 
 st.header("enter your code :")
 query = st.text_area("votre Code SQL ici", key="user_input")
+
 if query:
-    result = con.execute(query).df()
-    st.dataframe(result)
+    check_users_solution(query)
 
 tab2, tab3 = st.tabs(["Tables", "Solutions"])
 
@@ -84,6 +106,6 @@ with tab3:
         with open(f"answers/{exercise_name}.sql", "r") as f:
             answer = f.read()
         st.write(answer)
-        st.write(exercise_answer)
+        st.write(solutions_df)
     except NameError as e:
         st.write("no data for this exercise")

@@ -4,16 +4,29 @@ import os
 import logging
 import duckdb
 import streamlit as st
+from pathlib import Path
 
-if "data" not in os.listdir():
-    logging.error(os.listdir())
-    logging.error("creating folder data")
-    os.mkdir("data")
+# Configurer les logs
+logging.basicConfig(level=logging.INFO)
 
-if "exercises_sql_tables.duckdb" not in os.listdir("data"):
-    exec(open("init_db.py").read())
+# Définir les chemins
+data_folder = Path("data")
+db_file = data_folder / "exercises_sql_tables.duckdb"
 
-con = duckdb.connect(database="data/exercises_sql_tables.duckdb", read_only=False)
+# 1. Créer le dossier s'il n'existe pas
+if not data_folder.exists():
+    logging.info("Dossier 'data' non trouvé, création...")
+    data_folder.mkdir(parents=True, exist_ok=True)
+
+# 2. Créer le fichier s'il n'existe pas
+if not db_file.exists():
+    logging.info("Fichier DB non trouvé, exécution de init_db.py...")
+    try:
+        exec(open("init_db.py").read())
+    except Exception as e:
+        logging.error(f"Erreur lors de l'exécution de init_db.py : {e}")
+        raise
+
 
 with st.sidebar:
     theme = st.selectbox(

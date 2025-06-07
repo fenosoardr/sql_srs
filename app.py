@@ -27,6 +27,8 @@ if not db_file.exists():
         logging.error(f"Erreur lors de l'exécution de init_db.py : {e}")
         raise
 
+con = duckdb.connect(database="data/exercises_sql_tables.duckdb", read_only=False)
+
 
 with st.sidebar:
     theme = st.selectbox(
